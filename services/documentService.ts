@@ -1,13 +1,12 @@
 import * as mammoth from "mammoth";
 import * as pdfjsLib from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.js?url";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, AlignmentType } from "docx";
 import saveAs from "file-saver";
 import JSZip from "jszip";
 import PptxGenJS from "pptxgenjs";
+import html2pdf from "html2pdf.js";
 import { BibliographyEntry } from "../types";
-
-// Declare html2pdf as a global variable since it's loaded via script tag
-declare var html2pdf: any;
 
 // Handle module import structure (fix for "Cannot set properties of undefined" error)
 // In some environments, pdfjs-dist is exported as a default object within the module namespace.
@@ -15,7 +14,7 @@ const pdfjs = (pdfjsLib as any).default || pdfjsLib;
 
 // Configure PDF.js worker
 if (pdfjs.GlobalWorkerOptions) {
-  pdfjs.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 }
 
 export const parseDocument = async (file: File): Promise<string> => {
@@ -126,13 +125,6 @@ export const exportToPdf = (elementId: string, filename: string = 'ScholarCite_D
     jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
     pagebreak: { mode: ['css', 'legacy'] }
   };
-
-  if (typeof html2pdf === 'undefined') {
-    console.error("html2pdf library is not loaded.");
-    alert("PDF generation library failed to load. Please refresh the page.");
-    element.style.display = originalDisplay;
-    return;
-  }
 
   html2pdf()
     .from(element)
