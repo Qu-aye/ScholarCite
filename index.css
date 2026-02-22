@@ -6,3 +6,44 @@
   --color-primary: #2563eb;
   --color-secondary: #475569;
 }
+
+body {
+  background-color: #f3f4f6;
+}
+.paper-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0,0,0,0.02);
+}
+
+/* Defined globally so html2pdf can see it */
+.page-break {
+  page-break-before: always;
+  break-before: page;
+}
+
+/* Print Styling for PDF Export */
+@media print {
+  @page {
+    margin: 2cm;
+    size: auto;
+  }
+  body {
+    background-color: white;
+    margin: 0;
+    padding: 0;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  /* Hide scrollbars and ensure full height */
+  html, body {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+.print-only {
+  display: none;
+}

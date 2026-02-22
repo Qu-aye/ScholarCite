@@ -6,48 +6,6 @@
     <title>ScholarCite - Free Academic Citing Tool</title>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-      body {
-        background-color: #f3f4f6;
-      }
-      .paper-shadow {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0,0,0,0.02);
-      }
-      
-      /* Defined globally so html2pdf can see it */
-      .page-break {
-        page-break-before: always;
-        break-before: page;
-      }
-      
-      /* Print Styling for PDF Export */
-      @media print {
-        @page {
-          margin: 2cm;
-          size: auto;
-        }
-        body {
-          background-color: white;
-          margin: 0;
-          padding: 0;
-        }
-        .no-print {
-          display: none !important;
-        }
-        .print-only {
-          display: block !important;
-        }
-        /* Hide scrollbars and ensure full height */
-        html, body {
-          height: auto;
-          overflow: visible;
-        }
-      }
-      
-      .print-only {
-        display: none;
-      }
-    </style>
   <script type="importmap">
 {
   "imports": {
@@ -65,7 +23,6 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
