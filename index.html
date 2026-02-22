@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScholarCite - Free Academic Citing Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              serif: ['Merriweather', 'serif'],
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              primary: '#2563eb',
+              secondary: '#475569',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #f3f4f6;
+      }
+      .paper-shadow {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0,0,0,0.02);
+      }
+      
+      /* Defined globally so html2pdf can see it */
+      .page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+      
+      /* Print Styling for PDF Export */
+      @media print {
+        @page {
+          margin: 2cm;
+          size: auto;
+        }
+        body {
+          background-color: white;
+          margin: 0;
+          padding: 0;
+        }
+        .no-print {
+          display: none !important;
+        }
+        .print-only {
+          display: block !important;
+        }
+        /* Hide scrollbars and ensure full height */
+        html, body {
+          height: auto;
+          overflow: visible;
+        }
+      }
+      
+      .print-only {
+        display: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "mammoth": "https://esm.sh/mammoth@1.6.0",
+    "pdfjs-dist": "https://esm.sh/pdfjs-dist@3.11.174",
+    "docx": "https://esm.sh/docx@8.5.0",
+    "file-saver": "https://esm.sh/file-saver@2.0.5",
+    "jszip": "https://esm.sh/jszip@3.10.1",
+    "pptxgenjs": "https://esm.sh/pptxgenjs@3.12.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
