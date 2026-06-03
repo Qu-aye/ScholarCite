@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net (default-deny catch-all)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com');
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Entity Validation Builders
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt'])
+        && data.keys().size() <= 6
+        && data.uid == request.auth.uid
+        && data.email == request.auth.token.email
+        && data.createdAt == request.time;
+    }
+
+    function isValidDraft(data) {
+      return data.keys().hasAll(['title', 'content', 'userId', 'createdAt', 'updatedAt'])
+        && data.keys().size() <= 7
+        && data.title is string && data.title.size() <= 256
+        && data.content is string && data.content.size() <= 500000
+        && data.userId == request.auth.uid
+        && data.bibliography is list && data.bibliography.size() <= 500;
+    }
+
+    // Match blocks
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isVerified() && isValidId(userId) && isOwner(userId) && isValidUser(incoming());
+      allow update: if isVerified() && isValidId(userId) && isOwner(userId) && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL'])
+      );
+      allow delete: if false; // Document profiles are terminal once created
+      
+      match /drafts/{draftId} {
+        allow get: if isOwner(userId);
+        allow list: if isVerified() && isOwner(userId);
+        allow create: if isVerified() && isValidId(draftId) && isOwner(userId) && isValidDraft(incoming()) && incoming().createdAt == request.time;
+        allow update: if isVerified() && isValidId(draftId) && isOwner(userId) && isValidDraft(incoming()) && incoming().updatedAt == request.time && (
+          // Secure field consistency checks
+          incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasAny(['title', 'content', 'bibliography', 'citationStyle', 'updatedAt'])
+        );
+        allow delete: if isVerified() && isValidId(draftId) && isOwner(userId);
+      }
+    }
+  }
+}

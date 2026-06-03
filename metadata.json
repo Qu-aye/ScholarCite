@@ -1,5 +1,6 @@
 {
-  "name": "ScholarCite",
+  "name": "SewornaAI",
   "description": "A free research assistant that helps you find academic sources and automatically cites them in your document.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
