@@ -22,7 +22,9 @@ import {
   X,
   PlusCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Download,
+  Copy
 } from 'lucide-react';
 import { 
   auth, 
@@ -57,6 +59,60 @@ const ACADEMIC_TEMPLATE = `
   <p>To analyze the impact of inline assistive tooling, this study implements SewornaAI, an interactive workspace designed to identify published scientific publications and inject real-time bracket citations without leaving the immediate writing workspace. Highlighting any clinical claim or conceptual hypothesis in this active document panel triggers live intelligence lookup across indexed meta-registries.</p>
   <p>Subsequent testing demonstrates a substantial mitigation in task resumption latencies and context-switching fatigue. Direct reference composition in the text field enables instant Harvard, APA 7th Edition, MLA, and Chicago bibliography compilations.</p>
 `;
+
+// Helper functions for generating bibliography files in standard academic formats
+function generateBibTeXKey(source: Source, index: number): string {
+  if (!source.author) return `ref_${index + 1}`;
+  const firstAuthor = source.author.split(';')[0].split(',')[0].trim();
+  const lastName = firstAuthor.split(/\s+/).pop() || 'ref';
+  const cleanName = lastName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const year = source.year ? source.year.trim() : 'year';
+  return `${cleanName}${year}_${index + 1}`;
+}
+
+function convertToBibTeX(sources: Source[]): string {
+  return sources.map((source, index) => {
+    const key = generateBibTeXKey(source, index);
+    let authors = source.author || 'Unknown Author';
+    authors = authors.replace(/;/g, ' and ').replace(/,/g, ' and ');
+    authors = authors.replace(/\s+/g, ' ').trim();
+
+    let entry = `@article{${key},\n`;
+    entry += `  author  = {${authors}},\n`;
+    entry += `  title   = {${source.title || 'Untitled Work'}},\n`;
+    entry += `  year    = {${source.year || 'n.d.'}},\n`;
+    if (source.doi) {
+      entry += `  doi     = {${source.doi}},\n`;
+      entry += `  url     = {https://doi.org/${source.doi}}\n`;
+    } else {
+      entry += `  note    = {Retrieved from SewornaAI Platform}\n`;
+    }
+    entry += `}`;
+    return entry;
+  }).join('\n\n');
+}
+
+function convertToRIS(sources: Source[]): string {
+  return sources.map((source) => {
+    let ris = `TY  - JOUR\n`;
+    ris += `TI  - ${source.title || 'Untitled Work'}\n`;
+    const authors = (source.author || 'Unknown Author')
+      .split(/;|\band\b|,/)
+      .map(a => a.trim())
+      .filter(Boolean);
+    
+    authors.forEach(auth => {
+      ris += `AU  - ${auth}\n`;
+    });
+    ris += `PY  - ${source.year || 'n.d.'}\n`;
+    if (source.doi) {
+      ris += `DO  - ${source.doi}\n`;
+      ris += `UR  - https://doi.org/${source.doi}\n`;
+    }
+    ris += `ER  - \n`;
+    return ris;
+  }).join('\n');
+}
 
 interface FirestoreDraft {
   id: string;
@@ -95,6 +151,39 @@ export default function App() {
   const [isDeletingDraftId, setIsDeletingDraftId] = useState<string | null>(null);
   const [renamingDraftId, setRenamingDraftId] = useState<string | null>(null);
   const [renamingTitle, setRenamingTitle] = useState<string>('');
+  const [copiedFormat, setCopiedFormat] = useState<'bibtex' | 'ris' | null>(null);
+
+  // Bibliography copy and download event handlers
+  const handleCopyBibliography = (format: 'bibtex' | 'ris') => {
+    const text = format === 'bibtex' ? convertToBibTeX(bibliography) : convertToRIS(bibliography);
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedFormat(format);
+      setTimeout(() => setCopiedFormat(null), 2000);
+    }).catch((err) => {
+      console.error('Failed to copy bibliography: ', err);
+    });
+  };
+
+  const handleDownloadBibliography = (format: 'bibtex' | 'ris') => {
+    const content = format === 'bibtex' ? convertToBibTeX(bibliography) : convertToRIS(bibliography);
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const docTitle = currentFileName 
+      ? currentFileName.replace(/\.[^/.]+$/, "") 
+      : (activeDraftId ? drafts.find(d => d.id === activeDraftId)?.title : 'scholarcite_bibliography');
+    const safeTitle = (docTitle || 'scholarcite_bibliography')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '_');
+      
+    link.download = `${safeTitle}.${format === 'bibtex' ? 'bib' : 'ris'}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   // Handle load default academic template
   const handleLoadSample = () => {
@@ -668,6 +757,99 @@ export default function App() {
                 setCurrentFileName={setCurrentFileName}
                 onLoadSample={handleLoadSample}
               />
+
+              {/* Premium Bibliography Export Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 flex flex-col space-y-4 hover:shadow-md transition-all duration-300 animate-in fade-in duration-300" id="bibliography-export-sidebar">
+                <div>
+                  <h2 className="text-sm font-sans font-extrabold tracking-wide uppercase text-slate-805 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-indigo-600" />
+                    Bibliography Export
+                  </h2>
+                  <p className="text-[11px] text-slate-500 font-sans mt-0.5">Export active references to standard citation formats</p>
+                </div>
+
+                {bibliography.length === 0 ? (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4.5 text-center space-y-2">
+                    <AlertCircle className="w-4 h-4 text-slate-400 mx-auto" />
+                    <p className="text-xs font-bold text-slate-550 font-sans">No references to export</p>
+                    <p className="text-[10px] text-slate-400 font-sans leading-relaxed">
+                      Highlight claims inside your active paper draft and associate citations to compile your academic bibliography.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    {/* Status row */}
+                    <div className="flex items-center justify-between text-xs bg-indigo-50/30 border border-indigo-100/50 px-3.5 py-2.5 rounded-xl">
+                      <span className="font-sans font-semibold text-slate-600">Active Records:</span>
+                      <span className="font-sans font-bold text-indigo-600 px-2.5 py-0.5 bg-indigo-150 border border-indigo-100 rounded-full text-[10px]">
+                        {bibliography.length} {bibliography.length === 1 ? 'citation' : 'citations'}
+                      </span>
+                    </div>
+
+                    {/* BibTeX Export Group */}
+                    <div className="space-y-2 border border-slate-100 p-3.5 rounded-xl bg-slate-50/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800 font-sans">BibTeX Format (.bib)</span>
+                        {copiedFormat === 'bibtex' && (
+                          <span className="text-[10px] font-semibold font-sans text-emerald-600 flex items-center gap-0.5 animate-pulse">
+                            <Check className="w-3.5 h-3.5 animate-bounce" /> Copied!
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-sans leading-normal">
+                        Standard plain text reference format widely matched by LaTeX, Overleaf, and Zotero.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <button
+                          onClick={() => handleDownloadBibliography('bibtex')}
+                          className="flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold font-sans py-2 px-3 rounded-lg shadow-xs hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Download
+                        </button>
+                        <button
+                          onClick={() => handleCopyBibliography('bibtex')}
+                          className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-205 text-slate-705 text-xs font-bold font-sans py-2 px-3 rounded-lg shadow-xxs hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          Copy Raw
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RIS Export Group */}
+                    <div className="space-y-2 border border-slate-100 p-3.5 rounded-xl bg-slate-50/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800 font-sans">RIS Format (.ris)</span>
+                        {copiedFormat === 'ris' && (
+                          <span className="text-[10px] font-semibold font-sans text-emerald-600 flex items-center gap-0.5 animate-pulse">
+                            <Check className="w-3.5 h-3.5 animate-bounce" /> Copied!
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-sans leading-normal">
+                        Database standard supporting Mendeley, EndNote, and global academic indexing platforms.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <button
+                          onClick={() => handleDownloadBibliography('ris')}
+                          className="flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold font-sans py-2 px-3 rounded-lg shadow-xs hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Download
+                        </button>
+                        <button
+                          onClick={() => handleCopyBibliography('ris')}
+                          className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-205 text-slate-705 text-xs font-bold font-sans py-2 px-3 rounded-lg shadow-xxs hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          Copy Raw
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </section>
 
             {/* RIGHT COLUMN: Interactive Document Editor Canvas (8 / 12 width) */}

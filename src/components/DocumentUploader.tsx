@@ -9,6 +9,128 @@ interface DocumentUploaderProps {
   onLoadSample: () => void;
 }
 
+// Escapes raw content to safe HTML text
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// Basic inline Markdown formatting helper (bold, italic, links, inline code)
+function inlineMarkdownToHtml(text: string): string {
+  let html = escapeHtml(text);
+  
+  // Bold: **text** or __text__
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+  
+  // Italic: *text* or _text_
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+  
+  // Links: [text](url)
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  
+  // Inline code: `code`
+  html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+  
+  return html;
+}
+
+// Convert markdown text blocks to Tiptap-friendly HTML structure
+function markdownToHtml(md: string): string {
+  if (!md) return '';
+  const blocks = md.split(/\n\s*\n/);
+  
+  return blocks.map(block => {
+    const text = block.trim();
+    if (!text) return '';
+    
+    // Check for Headings
+    if (text.startsWith('# ')) {
+      return `<h1>${escapeHtml(text.substring(2))}</h1>`;
+    }
+    if (text.startsWith('## ')) {
+      return `<h2>${escapeHtml(text.substring(3))}</h2>`;
+    }
+    if (text.startsWith('### ')) {
+      return `<h3>${escapeHtml(text.substring(4))}</h3>`;
+    }
+    
+    const lines = text.split('\n');
+    
+    // Check for Unordered Lists
+    if (lines.every(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('+ ');
+    })) {
+      const items = lines.map(line => {
+        const content = line.trim().substring(2);
+        return `<li>${inlineMarkdownToHtml(content)}</li>`;
+      }).join('');
+      return `<ul>${items}</ul>`;
+    }
+
+    // Check for Ordered Lists
+    if (lines.every(line => /^\d+\.\s/.test(line.trim()))) {
+      const items = lines.map(line => {
+        const content = line.trim().replace(/^\d+\.\s/, '');
+        return `<li>${inlineMarkdownToHtml(content)}</li>`;
+      }).join('');
+      return `<ol>${items}</ol>`;
+    }
+    
+    // Plain paragraphs with internal break handling
+    const paragraphContent = lines.map(line => inlineMarkdownToHtml(line)).join('<br />');
+    return `<p>${paragraphContent}</p>`;
+  }).filter(Boolean).join('');
+}
+
+// Convert plain text into styled HTML paragraphs
+function textToHtml(text: string): string {
+  if (!text) return '';
+  return text
+    .split(/\n\s*\n/)
+    .map(para => {
+      const trimmed = para.trim();
+      if (!trimmed) return '';
+      const htmlSafe = escapeHtml(trimmed).replace(/\n/g, '<br />');
+      return `<p>${htmlSafe}</p>`;
+    })
+    .filter(Boolean)
+    .join('');
+}
+
+// Dynamic PDF text extractor helper
+async function parsePdf(arrayBuffer: ArrayBuffer): Promise<string> {
+  const pdfjsLib: any = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '3.11.174'}/pdf.worker.min.js`;
+
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
+  const pdf = await loadingTask.promise;
+  let fullText = '';
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    let lastY = -1;
+    let pageText = '';
+    
+    for (const item of textContent.items as any[]) {
+      // Assemble standard lines of text by matching y-coordinates
+      if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 5) {
+        pageText += '\n';
+      }
+      pageText += item.str;
+      lastY = item.transform[5];
+    }
+    fullText += pageText + '\n\n';
+  }
+  
+  return fullText;
+}
+
 export default function DocumentUploader({
   onDocumentLoaded,
   currentFileName,
@@ -23,8 +145,10 @@ export default function DocumentUploader({
   const processFile = async (file: File) => {
     if (!file) return;
     setError(null);
+    const filenameLower = file.name.toLowerCase();
 
-    if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
+    // MS Word: .docx
+    if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || filenameLower.endsWith('.docx')) {
       setIsLoading(true);
       try {
         const reader = new FileReader();
@@ -50,8 +174,91 @@ export default function DocumentUploader({
         setError("Error opening the selected file.");
         setIsLoading(false);
       }
-    } else {
-      setError('Unsupported format. Please upload a Microsoft Word document (.docx).');
+    } 
+    // Plain Text: .txt
+    else if (file.type === 'text/plain' || filenameLower.endsWith('.txt')) {
+      setIsLoading(true);
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const textContent = e.target?.result as string;
+            if (textContent && textContent.trim().length > 0) {
+              const htmlContent = textToHtml(textContent);
+              onDocumentLoaded(htmlContent);
+              setCurrentFileName(file.name);
+            } else {
+              setError("The uploaded text document appears to be empty.");
+            }
+          } catch (err) {
+            setError("Failed to read text file content.");
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        reader.readAsText(file);
+      } catch (err) {
+        setError("Error opening the selected file.");
+        setIsLoading(false);
+      }
+    }
+    // Markdown: .md
+    else if (filenameLower.endsWith('.md')) {
+      setIsLoading(true);
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const textContent = e.target?.result as string;
+            if (textContent && textContent.trim().length > 0) {
+              const htmlContent = markdownToHtml(textContent);
+              onDocumentLoaded(htmlContent);
+              setCurrentFileName(file.name);
+            } else {
+              setError("The uploaded Markdown document appears to be empty.");
+            }
+          } catch (err) {
+            setError("Failed to parse Markdown file content.");
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        reader.readAsText(file);
+      } catch (err) {
+        setError("Error opening the selected file.");
+        setIsLoading(false);
+      }
+    }
+    // PDF Document: .pdf
+    else if (file.type === 'application/pdf' || filenameLower.endsWith('.pdf')) {
+      setIsLoading(true);
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            const pdfText = await parsePdf(arrayBuffer);
+            if (pdfText && pdfText.trim().length > 0) {
+              const htmlContent = textToHtml(pdfText);
+              onDocumentLoaded(htmlContent);
+              setCurrentFileName(file.name);
+            } else {
+              setError("The uploaded PDF document does not contain extractable plain text.");
+            }
+          } catch (err) {
+            setError("Failed to parse and extract text from the PDF. Ensure it is not scanned/image-only.");
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (err) {
+        setError("Error opening the selected file.");
+        setIsLoading(false);
+      }
+    }
+    else {
+      setError('Unsupported format. Please upload a Microsoft Word document (.docx), Plain Text (.txt), Markdown (.md), or PDF (.pdf).');
     }
   };
 
@@ -96,7 +303,7 @@ export default function DocumentUploader({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-serif font-bold text-slate-900">Draft Ingestion</h2>
-          <p className="text-xs text-slate-500 font-sans mt-0.5">Load an existing Microsoft Word draft or start with templates</p>
+          <p className="text-xs text-slate-500 font-sans mt-0.5">Load an academic draft (Word, Plain Text, Markdown, PDF) or start with templates</p>
         </div>
         {!currentFileName && (
           <button
@@ -127,7 +334,7 @@ export default function DocumentUploader({
           ref={fileInputRef}
           type="file"
           className="hidden"
-          accept=".docx"
+          accept=".docx,.txt,.md,.pdf"
           onChange={handleFileInputChange}
           id="docx-file-input"
         />
@@ -135,7 +342,7 @@ export default function DocumentUploader({
         {isLoading ? (
           <div className="flex flex-col items-center space-y-3 py-5">
             <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
-            <p className="text-sm font-sans font-semibold text-slate-705">Converting Word structure to editable prose...</p>
+            <p className="text-sm font-sans font-semibold text-slate-700">Converting workspace draft to editable prose...</p>
           </div>
         ) : currentFileName ? (
           <div className="flex flex-col items-center space-y-3 py-2">
@@ -163,9 +370,9 @@ export default function DocumentUploader({
           <div className="flex flex-col items-center space-y-3 py-5 group">
             <UploadCloud className="w-10 h-10 text-slate-400 group-hover:text-indigo-600 group-hover:scale-105 transition-all duration-300" />
             <div className="text-sm text-slate-600 font-sans">
-              <span className="font-semibold text-indigo-600 hover:underline">Click to browse</span> or drag & drop your Microsoft Word draft here
+              <span className="font-semibold text-indigo-600 hover:underline">Click to browse</span> or drag & drop your document draft here
             </div>
-            <span className="text-xxs text-slate-400 font-sans tracking-wide uppercase">Supported format: .docx documents only</span>
+            <span className="text-xxs text-slate-400 font-sans tracking-wide uppercase">Supported formats: .docx, .txt, .md, .pdf</span>
           </div>
         )}
       </div>
