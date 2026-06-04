@@ -333,7 +333,7 @@ export default function DocumentEditor({
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12 space-y-3">
                   <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                  <span className="text-xs text-slate-500 font-semibold font-sans tracking-wide">Querying catalogues & registries...</span>
+                  <span className="text-xs text-slate-500 font-semibold font-sans tracking-wide">Querying catalogues & registries (including Google Scholar)...</span>
                 </div>
               ) : searchResults.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center space-y-2">
@@ -352,7 +352,7 @@ export default function DocumentEditor({
                     </span>
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="max-h-[600px] overflow-y-auto custom-scrollbar border border-slate-200 rounded-md p-4">
                     {searchResults.map((source, index) => {
                       const citationData = source.citations?.[citationStyle];
                       const inTextMarker = citationData?.inText || `[${source.author}, ${source.year}]`;
@@ -360,13 +360,13 @@ export default function DocumentEditor({
                         <div 
                           key={source.doi || index} 
                           onClick={() => insertCitation(source)}
-                          className="group relative bg-white border border-slate-200 hover:border-indigo-600 hover:bg-slate-50/40 p-4 rounded-xl shadow-xxs transition-all flex flex-col gap-2.5 cursor-pointer"
+                          className="hover:bg-slate-50 cursor-pointer p-3 mb-2 border-b last:border-0 transition-colors flex flex-col gap-2"
                         >
-                          <h5 className="text-xs font-bold text-slate-800 leading-snug group-hover:text-indigo-600 transition-colors">
+                          <h5 className="text-xs font-bold text-slate-800 leading-snug hover:text-indigo-600 transition-colors">
                             {source.title}
                           </h5>
                           
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xxs text-slate-505 font-sans">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xxs text-slate-550 font-sans font-medium">
                             <span className="font-bold text-slate-600">{source.author}</span>
                             <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                             <span>{source.year}</span>
@@ -379,9 +379,9 @@ export default function DocumentEditor({
                           </div>
 
                           {/* Quick preview styled like citation output box but smaller */}
-                          <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xxs group-hover:bg-white transition-colors">
+                          <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-100 text-xxs transition-colors">
                             <span className="text-slate-500 font-serif">In-text formatting:</span>
-                            <span className="font-mono font-bold text-indigo-600 bg-indigo-50/50 px-2.5 py-0.5 rounded-md border border-indigo-100/40">
+                            <span className="font-mono font-bold text-indigo-600 bg-indigo-50/50 px-2.5 py-0.5 rounded border border-indigo-100/40">
                               {inTextMarker}
                             </span>
                           </div>

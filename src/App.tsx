@@ -314,11 +314,11 @@ export default function App() {
       element.innerHTML = innerHtml;
 
       const opt = {
-        margin:       [15, 15, 15, 15],
+        margin:       15,
         filename:     safeFilename,
-        image:        { type: 'jpeg', quality: 0.98 },
+        image:        { type: 'jpeg' as const, quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, letterRendering: true, logging: false },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+        jsPDF:        { unit: 'mm' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
 
       // Execute pdf save using standard html2pdf constructor
@@ -1005,7 +1005,7 @@ export default function App() {
                 <div>
                   <h2 className="text-sm font-sans font-extrabold tracking-wide uppercase text-slate-805 flex items-center gap-2">
                     <FileDown className="w-4 h-4 text-indigo-600" />
-                    Manuscript Export
+                    Export Document
                   </h2>
                   <p className="text-[11px] text-slate-500 font-sans mt-0.5">Compile draft and references into formatted documents</p>
                 </div>
