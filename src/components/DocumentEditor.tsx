@@ -187,23 +187,23 @@ export default function DocumentEditor({
   return (
     <div className="space-y-6">
       {/* Configuration Row / Academic Styling Selector */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4.5 bg-slate-50 border border-slate-200 rounded-lg">
+      <div className="flex flex-col sm:flex-row items-between sm:items-center justify-between gap-4 p-5 bg-slate-50 border border-slate-200/80 rounded-2xl">
         <div className="flex items-center gap-3">
-          <BookMarked className="w-5 h-5 text-blue-900" />
+          <BookMarked className="w-5 h-5 text-indigo-600" />
           <div className="space-y-0.5">
-            <h3 className="text-sm font-sans font-semibold text-slate-800">Referencing Guidelines</h3>
-            <p className="text-xs text-slate-500 font-sans">Choose formatting profile for bibliography and insertable quotes</p>
+            <h3 className="text-sm font-sans font-bold text-slate-800">Referencing Profile</h3>
+            <p className="text-xs text-slate-500 font-sans">Choose formatting guidelines for compiled footnotes and citations</p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-600 font-sans uppercase tracking-wider">Style:</span>
+          <span className="text-xxs font-bold text-slate-400 font-sans uppercase tracking-wider">Profile:</span>
           <select 
             value={citationStyle}
             onChange={(e) => setCitationStyle(e.target.value as any)}
-            className="text-xs font-sans font-medium bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all cursor-pointer"
+            className="text-xs font-sans font-semibold bg-white hover:bg-slate-55 border border-slate-200 text-slate-800 rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all cursor-pointer"
           >
-            <option value="harvard">Cite Them Right Harvard (Default)</option>
+            <option value="harvard">Cite Them Right Harvard</option>
             <option value="apa">APA 7th Edition</option>
             <option value="mla">MLA 9th Edition</option>
             <option value="chicago">Chicago Manual of Style</option>
@@ -213,13 +213,13 @@ export default function DocumentEditor({
 
       {/* Editor component container - generous and full size */}
       <div className="relative" ref={editorContainerRef} id="editor-wrapper">
-        <div className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-xs">
-          <div className="border-b border-slate-200 px-4 py-3 bg-slate-50/50 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-slate-400" />
-              <span className="text-xs font-semibold text-slate-500 font-sans uppercase tracking-wider">Draft Editor Canvas</span>
+        <div className="border border-transparent rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-300 focus-within:ring-2 focus-within:ring-teal-500/85 focus-within:ring-offset-2">
+          <div className="border-b border-slate-100 px-5 py-4 bg-slate-50/40 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <FileText className="w-4 h-4 text-indigo-500" />
+              <span className="text-xxs font-bold text-slate-400 font-sans uppercase tracking-wider">Draft Editor Canvas</span>
             </div>
-            <span className="text-xxs font-mono text-slate-400 bg-slate-100/50 border border-slate-200/60 px-2 py-0.5 rounded-full">Prose Editor</span>
+            <span className="text-xxs font-mono text-indigo-650 bg-indigo-50 px-2.5 py-0.5 rounded-full font-semibold">Prose Editor</span>
           </div>
           
           <div className="p-6 sm:p-8 min-h-[350px]">
@@ -230,11 +230,11 @@ export default function DocumentEditor({
           </div>
 
           {/* Inline workflow guide banner inside the workspace */}
-          <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/70 flex items-center justify-between text-xs text-slate-500 font-sans">
+          <div className="border-t border-slate-100 px-5 py-4 bg-slate-50/40 flex items-center justify-between text-xs text-slate-505 font-sans">
             <span className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-blue-900 shrink-0" />
+              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
               <span>
-                Highlight any sentence in the editor and click <strong className="text-blue-900 font-bold">Find Citation</strong> to index live peer-reviewed sources.
+                Highlight any claim or phrase segment in the editor to trigger the live <strong className="text-indigo-600 font-bold">Find Citation</strong> assistant.
               </span>
             </span>
           </div>
@@ -248,9 +248,9 @@ export default function DocumentEditor({
           >
             <button
               onClick={handleSearch}
-              className="flex items-center gap-1.5 bg-blue-900 border border-blue-950 text-white shadow-md hover:bg-blue-800 focus:outline-none hover:scale-105 active:scale-95 transition-all px-4 py-2 rounded-full text-xs font-semibold font-sans uppercase tracking-wider"
+              className="flex items-center gap-1.5 bg-indigo-600 border border-indigo-700 text-white shadow-lg hover:bg-indigo-700 focus:outline-none hover:scale-105 active:scale-95 transition-all px-4 py-2.5 rounded-full text-xs font-semibold font-sans uppercase tracking-wider cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+              <Sparkles className="w-3.5 h-3.5 text-teal-350 animate-pulse" />
               Find Citation
             </button>
           </div>
@@ -258,33 +258,35 @@ export default function DocumentEditor({
       </div>
 
       {/* Styled Bibliography card section */}
-      <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm" id="bibliography-pane">
-        <div className="border-b border-slate-100 pb-4 mb-4 flex items-center gap-2.5">
-          <BookOpen className="w-5 h-5 text-blue-900" />
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300" id="bibliography-pane">
+        <div className="border-b border-slate-150 pb-4 mb-4 flex items-center gap-3">
+          <BookOpen className="w-5 h-5 text-indigo-650" />
           <div>
-            <h2 className="text-xl font-serif font-bold text-slate-800">Bibliography</h2>
-            <p className="text-xs text-slate-500 font-sans">Uniform references automatically compiled as you cite sources within the document</p>
+            <h2 className="text-lg font-serif font-bold text-slate-900">Bibliography</h2>
+            <p className="text-xs text-slate-500 font-sans">References automatically indexed and formatted as bracket citations are inserted</p>
           </div>
         </div>
         
         <div>
           {bibliography.length === 0 ? (
-            <div className="py-10 text-center bg-slate-50/50 border border-dashed border-slate-250 rounded-lg space-y-2">
-              <BookOpen className="w-8 h-8 text-slate-300 mx-auto" />
-              <p className="text-xs font-medium text-slate-500 font-sans">Your cited references will assemble automatically here</p>
-              <p className="text-xxs text-slate-400 font-sans">Select portion of text above and insert your first bracket citation</p>
+            <div className="py-12 text-center bg-slate-55/40 border border-dashed border-slate-200 rounded-xl space-y-2">
+              <BookOpen className="w-8 h-8 text-slate-350 mx-auto" />
+              <p className="text-xs font-semibold text-slate-500 font-sans">References will compile automatically</p>
+              <p className="text-xxs text-slate-400 font-sans max-w-[280px] mx-auto leading-relaxed">
+                Highlight a claim segment in your paper draft above and anchor your first literature citation
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {bibliography.map((source, index) => {
                 const citationData = source.citations?.[citationStyle];
                 const fullReference = citationData?.full || `${source.author} (${source.year}). *${source.title}*. DOI: ${source.doi}`;
                 return (
-                  <div key={source.doi || index} className="bg-slate-50 border-l-4 border-blue-900 p-4 rounded-r-md font-mono text-sm text-slate-700 leading-relaxed break-words shadow-xxs">
-                    <span className="font-sans font-bold text-xxs text-slate-400 mr-2 bg-slate-200 px-1.5 py-0.5 rounded">
+                  <div key={source.doi || index} className="bg-stone-50/50 border-l-4 border-indigo-600 p-5 rounded-r-xl font-serif font-medium text-sm text-slate-800 leading-relaxed break-words shadow-xxs">
+                    <span className="font-sans font-bold text-xxs text-indigo-600 mr-2 bg-indigo-50 px-2 py-1 rounded-md inline-block align-middle transform -translate-y-0.5">
                       [{index + 1}]
                     </span>
-                    {fullReference}
+                    <span className="align-middle">{fullReference}</span>
                   </div>
                 );
               })}
@@ -300,13 +302,13 @@ export default function DocumentEditor({
           onClick={closePopup}
         >
           <div 
-            className="bg-white border border-slate-200 rounded-lg shadow-xl w-full max-w-xl max-h-[85vh] overflow-hidden flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-200 p-6"
+            className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] overflow-hidden flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-200 p-6"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Search className="w-5 h-5 text-blue-900 animate-pulse" />
+              <div className="flex items-center gap-2.5">
+                <Search className="w-5 h-5 text-indigo-600 animate-pulse" />
                 <h4 className="text-base font-serif font-bold text-slate-900">Academic Literature Search</h4>
               </div>
               <button 
@@ -321,7 +323,7 @@ export default function DocumentEditor({
             {/* Inquiring context - styled elegantly as a Citation Output Box to represent search */}
             <div className="space-y-1.5">
               <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider font-sans">Inquiring Context:</span>
-              <div className="bg-slate-50 border-l-4 border-blue-900 p-4 rounded-r-md font-sans text-xs text-slate-700 italic leading-relaxed">
+              <div className="bg-stone-50/50 border-l-4 border-indigo-600 p-4 rounded-r-xl font-sans text-xs text-slate-700 italic leading-relaxed">
                 "{selectedText.length > 200 ? `${selectedText.substring(0, 200)}...` : selectedText}"
               </div>
             </div>
@@ -330,11 +332,11 @@ export default function DocumentEditor({
             <div className="flex-1 overflow-y-auto min-h-[220px] pr-1">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12 space-y-3">
-                  <Loader2 className="w-8 h-8 text-blue-900 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
                   <span className="text-xs text-slate-500 font-semibold font-sans tracking-wide">Querying catalogues & registries...</span>
                 </div>
               ) : searchResults.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-lg border border-dashed border-slate-250 text-center space-y-2">
+                <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center space-y-2">
                   <AlertCircle className="w-6 h-6 text-slate-400" />
                   <p className="text-xs font-semibold text-slate-700 font-sans">No matching literature indexes identified</p>
                   <p className="text-xxs text-slate-400 font-sans max-w-[320px] mx-auto leading-relaxed">
@@ -345,7 +347,7 @@ export default function DocumentEditor({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider font-sans">Found Citations:</span>
-                    <span className="text-xxs font-bold font-sans bg-teal-50 text-teal-700 px-2.5 py-0.5 rounded-full border border-teal-100">
+                    <span className="text-xxs font-bold font-sans bg-indigo-50 text-indigo-750 px-2.5 py-0.5 rounded-full border border-indigo-100">
                       {searchResults.length} Matches Found
                     </span>
                   </div>
@@ -358,13 +360,13 @@ export default function DocumentEditor({
                         <div 
                           key={source.doi || index} 
                           onClick={() => insertCitation(source)}
-                          className="group relative bg-white border border-slate-200 hover:border-blue-900 hover:bg-slate-50/50 p-4 rounded-lg shadow-xxs transition-all flex flex-col gap-2.5 cursor-pointer"
+                          className="group relative bg-white border border-slate-200 hover:border-indigo-600 hover:bg-slate-50/40 p-4 rounded-xl shadow-xxs transition-all flex flex-col gap-2.5 cursor-pointer"
                         >
-                          <h5 className="text-xs font-semibold text-slate-800 leading-snug group-hover:text-blue-900 transition-colors">
+                          <h5 className="text-xs font-bold text-slate-800 leading-snug group-hover:text-indigo-600 transition-colors">
                             {source.title}
                           </h5>
                           
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xxs text-slate-500 font-sans">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xxs text-slate-505 font-sans">
                             <span className="font-bold text-slate-600">{source.author}</span>
                             <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                             <span>{source.year}</span>
@@ -377,9 +379,9 @@ export default function DocumentEditor({
                           </div>
 
                           {/* Quick preview styled like citation output box but smaller */}
-                          <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-md border border-slate-100 text-xxs group-hover:bg-white transition-colors">
+                          <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xxs group-hover:bg-white transition-colors">
                             <span className="text-slate-500 font-serif">In-text formatting:</span>
-                            <span className="font-mono font-bold text-blue-900 bg-blue-50/50 px-2.5 py-0.5 rounded border border-blue-100/50">
+                            <span className="font-mono font-bold text-indigo-600 bg-indigo-50/50 px-2.5 py-0.5 rounded-md border border-indigo-100/40">
                               {inTextMarker}
                             </span>
                           </div>
