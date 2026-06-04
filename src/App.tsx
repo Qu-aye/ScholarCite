@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import DocumentUploader from './components/DocumentUploader';
 import DocumentEditor from './components/DocumentEditor';
 import CitationForm from './components/CitationForm';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 import { 
   GraduationCap, 
   FileText, 
@@ -24,7 +26,8 @@ import {
   Clock,
   AlertCircle,
   Download,
-  Copy
+  Copy,
+  FileDown
 } from 'lucide-react';
 import { 
   auth, 
@@ -183,6 +186,245 @@ export default function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
+  const [isExportingDocx, setIsExportingDocx] = useState<boolean>(false);
+
+  // Convert HTML to simple, clean Markdown structure
+  const handleDownloadMarkdown = () => {
+    let markdown = documentContent || '';
+    
+    // Header conversions
+    markdown = markdown.replace(/<h1>(.*?)<\/h1>/gi, '# $1\n\n');
+    markdown = markdown.replace(/<h2>(.*?)<\/h2>/gi, '## $1\n\n');
+    markdown = markdown.replace(/<h3>(.*?)<\/h3>/gi, '### $1\n\n');
+    
+    // Standard block formatting
+    markdown = markdown.replace(/<p>(.*?)<\/p>/gi, '$1\n\n');
+    markdown = markdown.replace(/<strong>(.*?)<\/strong>/gi, '**$1**');
+    markdown = markdown.replace(/<b>(.*?)<\/b>/gi, '**$1**');
+    markdown = markdown.replace(/<em>(.*?)<\/em>/gi, '*$1*');
+    markdown = markdown.replace(/<i>(.*?)<\/i>/gi, '*$1*');
+    
+    // Lists & formatting
+    markdown = markdown.replace(/<li>(.*?)<\/li>/gi, '- $1\n');
+    markdown = markdown.replace(/<ul>/gi, '');
+    markdown = markdown.replace(/<\/ul>/gi, '\n');
+    markdown = markdown.replace(/<ol>/gi, '');
+    markdown = markdown.replace(/<\/ol>/gi, '\n');
+    markdown = markdown.replace(/<a href="(.*?)".*?>(.*?)<\/a>/gi, '[$2]($1)');
+    markdown = markdown.replace(/<br\s*\/?>/gi, '\n');
+    
+    // Strip other unwanted HTML wrappers
+    markdown = markdown.replace(/<[^>]+>/g, '');
+    
+    markdown = markdown
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>');
+
+    let docTitle = currentFileName 
+      ? currentFileName.replace(/\.[^/.]+$/, "") 
+      : (activeDraftId ? drafts.find(d => d.id === activeDraftId)?.title : 'scholarcite_manuscript');
+    let safeTitle = (docTitle || 'scholarcite_manuscript')
+      .replace(/\.[^/.]+$/, "");
+
+    let finalMarkdown = `# ${safeTitle}\n\n${markdown.trim()}\n\n`;
+
+    // Append bibliography if it contains references
+    if (bibliography && bibliography.length > 0) {
+      finalMarkdown += `## References\n\n`;
+      bibliography.forEach((source, index) => {
+        const citationData = source?.citations?.[citationStyle];
+        const fullReference = citationData?.full || `${source.author} (${source.year}). ${source.title}. DOI: ${source.doi}`;
+        finalMarkdown += `**[${index + 1}]** ${fullReference}\n\n`;
+      });
+    }
+
+    const blob = new Blob([finalMarkdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${safeTitle.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPDF = async () => {
+    if (isExportingPDF) return;
+    setIsExportingPDF(true);
+    try {
+      const docTitle = currentFileName 
+        ? currentFileName.replace(/\.[^/.]+$/, "") 
+        : (activeDraftId ? drafts.find(d => d.id === activeDraftId)?.title : 'scholarcite_manuscript');
+      const safeTitle = (docTitle || 'scholarcite_manuscript')
+        .replace(/\.[^/.]+$/, "");
+      const safeFilename = safeTitle.toLowerCase().replace(/[^a-z0-9_-]/g, '_') + '.pdf';
+
+      // Create highly styled container for academic PDF compiling
+      const element = document.createElement('div');
+      element.className = 'academic-pdf-compile font-serif text-slate-900 p-12 max-w-4xl mx-auto';
+      element.style.fontFamily = 'Georgia, Cambria, "Times New Roman", Times, serif';
+      element.style.lineHeight = '1.6';
+      element.style.color = '#1e293b'; // slate-800
+      element.style.padding = '40px';
+
+      // Assemble content
+      let innerHtml = `
+        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 16px; margin-bottom: 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h1 style="font-size: 26px; font-weight: bold; margin-bottom: 10px; color: #0f172a; line-height: 1.25;">
+            ${safeTitle}
+          </h1>
+          <div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; font-family: monospace; text-transform: uppercase;">
+            <span>SewornaAI Scientific Workspace</span>
+            <span>Date Exchanged: ${new Date().toLocaleDateString()}</span>
+          </div>
+        </div>
+        
+        <div class="draft-content" style="font-size: 14px; text-align: justify;">
+          ${documentContent || '<p style="color: #94a3b8; font-style: italic;">No core draft content authored yet.</p>'}
+        </div>
+      `;
+
+      // Append bibliography references nicely at the bottom on a clean page-break
+      if (bibliography && bibliography.length > 0) {
+        innerHtml += `
+          <div style="page-break-before: always; margin-top: 40px; padding-top: 24px; border-top: 1px solid #cbd5e1;">
+            <h2 style="font-size: 20px; font-family: Georgia, Cambria, serif; font-weight: bold; color: #0f172a; margin-bottom: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">References</h2>
+            <div style="font-size: 12px; line-height: 1.6;">
+              ${bibliography.map((source, index) => {
+                const citationData = source?.citations?.[citationStyle];
+                const fullReference = citationData?.full || `${source.author} (${source.year}). ${source.title}. DOI: ${source.doi}`;
+                return `
+                  <div style="margin-bottom: 12px; padding-left: 28px; text-indent: -28px; text-align: justify;">
+                    <span style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-weight: bold; color: #4f46e5; margin-right: 8px;">[${index + 1}]</span>
+                    ${fullReference}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      element.innerHTML = innerHtml;
+
+      const opt = {
+        margin:       [15, 15, 15, 15],
+        filename:     safeFilename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+      };
+
+      // Execute pdf save using standard html2pdf constructor
+      await html2pdf().from(element).set(opt).save();
+    } catch (err) {
+      console.error('Failed to compile PDF manuscript:', err);
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
+  const handleDownloadDocx = () => {
+    setIsExportingDocx(true);
+    try {
+      const docTitle = currentFileName 
+        ? currentFileName.replace(/\.[^/.]+$/, "") 
+        : (activeDraftId ? drafts.find(d => d.id === activeDraftId)?.title : 'scholarcite_manuscript');
+      const safeTitle = (docTitle || 'scholarcite_manuscript')
+        .replace(/\.[^/.]+$/, "");
+      
+      let referencesHtml = '';
+      if (bibliography && bibliography.length > 0) {
+        referencesHtml = `
+          <div style="page-break-before: always; margin-top: 40px; border-top: 1px solid #cbd5e1; padding-top: 20px;">
+            <h2 style="font-family: Arial, sans-serif; font-size: 18pt; font-weight: bold; color: #0f172a; margin-bottom: 12pt;">References</h2>
+            ${bibliography.map((source, index) => {
+              const citationData = source?.citations?.[citationStyle];
+              const fullReference = citationData?.full || `${source.author} (${source.year}). ${source.title}. DOI: ${source.doi}`;
+              return `
+                <p style="font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.5; margin-bottom: 8pt; text-indent: -24pt; margin-left: 24pt;">
+                  <strong style="color: #4f46e5;">[${index + 1}]</strong> ${fullReference}
+                </p>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      const completeHtml = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <title>${safeTitle}</title>
+          <!--[if gte mso 9]>
+          <xml>
+            <w:WordDocument>
+              <w:View>Print</w:View>
+              <w:Zoom>100</w:Zoom>
+              <w:DoNotOptimizeForBrowser/>
+            </w:WordDocument>
+          </xml>
+          <![endif]-->
+          <style>
+            body {
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 12pt;
+              line-height: 1.6;
+              color: #000000;
+            }
+            h1, h2, h3, h4 {
+              font-family: Arial, Helvetica, sans-serif;
+              color: #0f172a;
+              margin-top: 18pt;
+              margin-bottom: 6pt;
+            }
+            h1 { font-size: 24pt; font-weight: bold; margin-bottom: 12pt; }
+            h2 { font-size: 16pt; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+            h3 { font-size: 13pt; font-weight: bold; }
+            p { margin-bottom: 10pt; text-align: justify; }
+            ul, ol { margin-bottom: 10pt; padding-left: 20pt; }
+            li { margin-bottom: 4pt; }
+            code { font-family: 'Courier New', Courier, monospace; background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-size: 10pt; }
+            strong { font-weight: bold; }
+            em { font-style: italic; }
+          </style>
+        </head>
+        <body>
+          <div style="font-family: Arial, sans-serif; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 24px;">
+            <h1 style="margin: 0; padding-bottom: 6px;">${safeTitle}</h1>
+            <div style="display: flex; justify-content: space-between; font-size: 9pt; color: #475569;">
+              <span>SewornaAI Scientific Workspace</span>
+              <span>Compiled: ${new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+          <div>
+            ${documentContent || '<p style="color: #64748b; font-style: italic;">No core draft content authored yet.</p>'}
+          </div>
+          ${referencesHtml}
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob(['\ufeff' + completeHtml], {
+        type: 'application/msword;charset=utf-8'
+      });
+      
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${safeTitle.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.doc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Word export error:', err);
+    } finally {
+      setIsExportingDocx(false);
+    }
   };
 
   // Handle load default academic template
@@ -758,6 +1000,80 @@ export default function App() {
                 onLoadSample={handleLoadSample}
               />
 
+              {/* Premium Manuscript and Draft Export Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 flex flex-col space-y-4 hover:shadow-md transition-all duration-300 animate-in fade-in duration-300" id="manuscript-export-sidebar">
+                <div>
+                  <h2 className="text-sm font-sans font-extrabold tracking-wide uppercase text-slate-805 flex items-center gap-2">
+                    <FileDown className="w-4 h-4 text-indigo-600" />
+                    Manuscript Export
+                  </h2>
+                  <p className="text-[11px] text-slate-500 font-sans mt-0.5">Compile draft and references into formatted documents</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5">
+                  {/* PDF formatted layout compiler */}
+                  <button
+                    onClick={handleDownloadPDF}
+                    disabled={isExportingPDF}
+                    className="flex items-center justify-between p-3 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-indigo-50/20 hover:border-indigo-100/50 transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 font-bold shrink-0 text-xxs">
+                        PDF
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 leading-tight">Formatted PDF</p>
+                        <p className="text-[10px] text-slate-400 font-sans leading-none mt-0.5">Academic font, citation breaks</p>
+                      </div>
+                    </div>
+                    {isExportingPDF ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0" />
+                    )}
+                  </button>
+
+                  {/* Microsoft Word Document Exporter */}
+                  <button
+                    onClick={handleDownloadDocx}
+                    disabled={isExportingDocx}
+                    className="flex items-center justify-between p-3 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-indigo-50/20 hover:border-indigo-100/50 transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0 text-xxs">
+                        DOCX
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 leading-tight">Word Manuscript</p>
+                        <p className="text-[10px] text-slate-400 font-sans leading-none mt-0.5">Preserves fonts & styled lists</p>
+                      </div>
+                    </div>
+                    {isExportingDocx ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0" />
+                    )}
+                  </button>
+
+                  {/* Markdown backup plain exporter */}
+                  <button
+                    onClick={handleDownloadMarkdown}
+                    className="flex items-center justify-between p-3 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-indigo-50/20 hover:border-indigo-100/50 transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 font-bold shrink-0 text-xxs">
+                        MD
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 leading-tight">Markdown Document</p>
+                        <p className="text-[10px] text-slate-400 font-sans leading-none mt-0.5">Minimalist writing format</p>
+                      </div>
+                    </div>
+                    <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0" />
+                  </button>
+                </div>
+              </div>
+
               {/* Premium Bibliography Export Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 flex flex-col space-y-4 hover:shadow-md transition-all duration-300 animate-in fade-in duration-300" id="bibliography-export-sidebar">
                 <div>
@@ -882,18 +1198,51 @@ export default function App() {
 
               {/* Central Editor Canvas Layout Panel */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200/85 p-6 flex flex-col gap-4">
-                <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
+                <div className="pb-3 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-indigo-600" />
                     <span className="text-xs font-extrabold text-slate-505 font-sans uppercase tracking-wider">
                       Active Paper Workspace
                     </span>
                   </div>
-                  {currentFileName && (
-                    <span className="text-xxs font-mono text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100/50">
-                      Draft Ingested
-                    </span>
-                  )}
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Quick PDF compile button */}
+                    <button
+                      onClick={handleDownloadPDF}
+                      disabled={isExportingPDF}
+                      title="Compile and download formatted PDF"
+                      className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100/80 text-rose-700 border border-rose-200 hover:border-rose-300 px-3 py-1.5 rounded-lg text-xxs font-sans font-bold transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                    >
+                      {isExportingPDF ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-rose-600" />
+                      ) : (
+                        <FileDown className="w-3 h-3 text-rose-500" />
+                      )}
+                      <span>Export PDF</span>
+                    </button>
+
+                    {/* Quick Word Document Export button */}
+                    <button
+                      onClick={handleDownloadDocx}
+                      disabled={isExportingDocx}
+                      title="Download as Microsoft Word document"
+                      className="flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100/80 text-blue-700 border border-blue-200 hover:border-blue-300 px-3 py-1.5 rounded-lg text-xxs font-sans font-bold transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                    >
+                      {isExportingDocx ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
+                      ) : (
+                        <FileDown className="w-3 h-3 text-blue-500" />
+                      )}
+                      <span>Export Word</span>
+                    </button>
+
+                    {currentFileName && (
+                      <span className="text-xxs font-mono text-indigo-600 bg-indigo-50/50 px-2.5 py-1.5 rounded-lg border border-indigo-100/40">
+                        {currentFileName}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 
                 <DocumentEditor 
