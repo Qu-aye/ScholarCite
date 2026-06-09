@@ -2,7 +2,11 @@ export interface Source {
   title: string;
   author: string;
   year: string;
-  doi: string;
+  doi?: string;
+  journal?: string;
+  volume?: string;
+  issue?: string;
+  page?: string;
   citations?: {
     harvard: {
       inText: string;

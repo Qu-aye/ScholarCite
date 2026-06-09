@@ -547,8 +547,6 @@ export default function App() {
           content: documentContent,
           bibliography: bibliography,
           citationStyle: citationStyle,
-          userId: user.uid,
-          createdAt: activeDraftCreatedAt || serverTimestamp(),
           updatedAt: serverTimestamp()
         });
         setSyncStatus('saved');

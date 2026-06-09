@@ -49,3 +49,53 @@ body {
 .print-only {
   display: none;
 }
+
+/* Polished In-text Academic Citation Styling */
+.academic-citation {
+  display: inline-flex !important;
+  align-items: center !important;
+  background-color: #f0fdfa !important; /* teal-50 */
+  color: #0f766e !important; /* teal-700 */
+  border: 1px solid #99f6e4 !important; /* teal-200 */
+  padding: 0.1rem 0.45rem !important;
+  border-radius: 0.375rem !important; /* rounded-md */
+  font-weight: 600 !important;
+  font-size: 0.825em !important;
+  font-family: var(--font-sans) !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin: 0 0.15rem !important;
+  text-decoration: none !important;
+  box-shadow: 0 1px 2px 0 rgba(15, 118, 110, 0.05) !important;
+  user-select: none !important;
+}
+
+.academic-citation:hover {
+  background-color: #ccfbf1 !important; /* teal-100 */
+  color: #0d9488 !important; /* teal-600 */
+  border-color: #2dd4bf !important; /* teal-400 */
+  transform: translateY(-0.5px) !important;
+  box-shadow: 0 3px 6px -1px rgba(15, 118, 110, 0.12), 0 1px 2px -1px rgba(15, 118, 110, 0.08) !important;
+}
+
+/* Pulsing highlight effect when bibliography item is clicked or citation is referenced */
+@keyframes highlight-pulse {
+  0% {
+    background-color: #e0f2fe;
+    box-shadow: 0 0 0 2px #3b82f6;
+  }
+  50% {
+    background-color: #bae6fd;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+  }
+  100% {
+    background-color: inherit;
+    box-shadow: none;
+  }
+}
+
+.bibliography-highlighted {
+  animation: highlight-pulse 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
+}
+
